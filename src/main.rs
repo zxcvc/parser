@@ -1,12 +1,10 @@
+mod parser;
 mod scanner;
+mod utils;
 
-use scanner::Scanner;
-
-
-use scanner::Token;
+use parser::Parser;
 fn main() {
-    let mut s = Scanner::new(r#"function fn(a){console.log(2);let a = 1; let b = a;}"#);
-    for item in s.filter(|token|match token{&Token::Space(_)=>false, _ => true}){
-        println!("{:?}",item);
-    }
+    let mut parser = Parser::new(r#"(1)"#);
+    let exp = parser.expresson();
+    dbg!(exp);
 }

@@ -1,10 +1,8 @@
-mod utils;
-use std::{iter::Peekable, str::Chars, error::Error, collections::HashMap};
-use utils::{is_space,is_digital,is_alpha,is_alphadigital};
+use super::utils::{is_alpha, is_alphadigital, is_digital, is_space};
 use lazy_static::lazy_static;
+use std::{collections::HashMap, error::Error, iter::Peekable, str::Chars};
 
-
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Dot,
     Comma,
@@ -42,11 +40,12 @@ pub enum Token {
     Break,
     True,
     False,
-    This
+    Null,
+    This,
 }
 
-lazy_static!{
-    static ref IDENTIFER_MAP:HashMap<&'static str,Token> = {
+lazy_static! {
+    static ref IDENTIFER_MAP: HashMap<&'static str, Token> = {
         let mut map = HashMap::new();
         map.insert("let", Token::Let);
         map.insert("function", Token::Function);
@@ -58,173 +57,197 @@ lazy_static!{
         map.insert("break", Token::Break);
         map.insert("true", Token::True);
         map.insert("false", Token::False);
+        map.insert("null", Token::Null);
         map.insert("this", Token::This);
         map
     };
-    
 }
 
-
-
-
-
-#[derive(Default,Debug,Clone,)]
-struct Position{
-    row:u32,
-    col:u32,
+#[derive(Default, Debug, Clone)]
+struct Position {
+    row: u32,
+    col: u32,
 }
 
-impl Position{
-    pub fn new(row:u32,col:u32)->Self{
-        Self{
-            row,
-            col,
-        }
+impl Position {
+    pub fn new(row: u32, col: u32) -> Self {
+        Self { row, col }
     }
 }
 
 #[derive(Debug)]
-pub struct Scanner<'a>{
-    source:Peekable<Chars<'a>>,
-    current_string:String,
-    position:Position
+pub struct Scanner<'a> {
+    source: Peekable<Chars<'a>>,
+    current_string: String,
+    position: Position,
 }
 
-impl<'a> Scanner<'a>{
-    pub fn new(source:&'a str)->Self{
-        Self{
-            source:source.chars().peekable(),
-            current_string:String::new(),
-            position:Position::default(),
+impl<'a> Scanner<'a> {
+    pub fn new(source: &'a str) -> Self {
+        Self {
+            source: source.chars().peekable(),
+            current_string: String::new(),
+            position: Position::default(),
         }
     }
 
-    pub fn clear(&mut self){
+    pub fn clear(&mut self) {
         self.current_string.clear();
     }
 
-    pub fn advance(&mut self)->Option<char>{
+    pub fn advance(&mut self) -> Option<char> {
         let ch = self.source.next();
-        match ch{
+        match ch {
             Some(c) => {
                 self.current_string.push(c);
                 if c == '\n' {
                     self.position.col = 0;
                     self.position.row = 0;
-                }else{
+                } else {
                     self.position.col += 1;
                 }
             }
-            None => return None
+            None => return None,
         }
         ch
     }
 
-    pub fn get_next(&mut self) -> Option<&char>{
+    pub fn get_next(&mut self) -> Option<&char> {
         self.source.peek()
     }
 
-    pub fn next_is_expected(&mut self,expected:char)->bool{
-        match self.get_next(){
+    pub fn next_is_expected(&mut self, expected: char) -> bool {
+        match self.get_next() {
             Some(&ch) => ch == expected,
-            None => false
+            None => false,
         }
     }
 
-    pub fn next_is_expected_by(&mut self,func:&dyn Fn(char)->bool)->bool{
-        match self.get_next(){
+    pub fn next_is_expected_by(&mut self, func: &dyn Fn(char) -> bool) -> bool {
+        match self.get_next() {
             Some(&ch) => func(ch),
-            None => false
+            None => false,
         }
     }
 
-
-    pub fn advance_until(&mut self,expected:char){//一直推进 直到遇见expected（expected不会被推进）
-        while !self.next_is_expected(expected){
+    pub fn advance_until(&mut self, expected: char) {
+        //一直推进 直到遇见expected（expected不会被推进）
+        while !self.next_is_expected(expected) {
             self.advance();
         }
     }
 
-    pub fn advance_until_by(&mut self,func:&dyn Fn(char)->bool){
-        while self.next_is_expected_by(func){
+    pub fn advance_until_by(&mut self, func: &dyn Fn(char) -> bool) {
+        while self.next_is_expected_by(func) {
             self.advance();
         }
     }
 
-    pub fn get_number(&mut self)->Result<f64,impl Error>{
-        self.advance_until_by(&|ch|is_digital(ch));
+    pub fn get_number(&mut self) -> Result<f64, impl Error> {
+        self.advance_until_by(&|ch| is_digital(ch));
         let digital = self.current_string.clone();
         digital.parse::<f64>()
     }
 
-    pub fn get_string(&mut self)->String{
+    pub fn get_string(&mut self) -> String {
         self.advance_until('"');
         let s = self.current_string.clone();
         self.advance();
         s
     }
 
-    pub fn get_identifier(&mut self)->String{
-        self.advance_until_by(&|ch|is_alphadigital(ch));
+    pub fn get_identifier(&mut self) -> String {
+        self.advance_until_by(&|ch| is_alphadigital(ch));
         let s = self.current_string.clone();
         s
     }
 
-    pub fn get_space(&mut self)->String{
-        self.advance_until_by(&|ch|is_space(ch));
+    pub fn get_space(&mut self) -> String {
+        self.advance_until_by(&|ch| is_space(ch));
         let space = self.current_string.clone();
         space
     }
 
-    pub fn scan(&mut self)->Result<Token,Option<Token>>{
+    pub fn scan(&mut self) -> Result<Token, Option<Token>> {
         let ch = self.advance();
         let token = match ch {
-            Some('.') => { self.clear();Token::Dot },
-            Some(',') => { self.clear();Token::Comma },
-            Some(';') => { self.clear();Token::Semicolon },
-            Some('+') => { self.clear();Token::Plus },
-            Some('-') => { self.clear();Token::Minus },
-            Some('*') => { self.clear();Token::Start },
-            Some('/') => { self.clear();Token::Div },
-            Some('(') => { self.clear();Token::LeftParent },
-            Some(')') => { self.clear();Token::RightParent },
-            Some('{') => { self.clear();Token::LeftBrace },
-            Some('}') => { self.clear();Token::RightBrace },
-            Some(' ') => {
-                Token::Space(self.get_space())
-            },
+            Some('.') => {
+                self.clear();
+                Token::Dot
+            }
+            Some(',') => {
+                self.clear();
+                Token::Comma
+            }
+            Some(';') => {
+                self.clear();
+                Token::Semicolon
+            }
+            Some('+') => {
+                self.clear();
+                Token::Plus
+            }
+            Some('-') => {
+                self.clear();
+                Token::Minus
+            }
+            Some('*') => {
+                self.clear();
+                Token::Start
+            }
+            Some('/') => {
+                self.clear();
+                Token::Div
+            }
+            Some('(') => {
+                self.clear();
+                Token::LeftParent
+            }
+            Some(')') => {
+                self.clear();
+                Token::RightParent
+            }
+            Some('{') => {
+                self.clear();
+                Token::LeftBrace
+            }
+            Some('}') => {
+                self.clear();
+                Token::RightBrace
+            }
+            Some(' ') => Token::Space(self.get_space()),
             Some('=') => {
-                if let Some(&'=') = self.get_next(){
+                if let Some(&'=') = self.get_next() {
                     self.advance();
                     Token::DoubleEq
-                }else{
+                } else {
                     Token::Eq
                 }
-            },
+            }
             Some('!') => {
-                if let Some(&'=') = self.get_next(){
+                if let Some(&'=') = self.get_next() {
                     self.advance();
                     Token::NotEq
-                }else{
+                } else {
                     Token::Exclamation
                 }
-            },
+            }
             Some('>') => {
-                if let Some(&'=') = self.get_next(){
+                if let Some(&'=') = self.get_next() {
                     self.advance();
                     Token::GreaterEq
-                }else{
+                } else {
                     Token::Greater
                 }
-            },
+            }
             Some('<') => {
-                if let Some(&'=') = self.get_next(){
+                if let Some(&'=') = self.get_next() {
                     self.advance();
                     Token::LessEq
-                }else{
+                } else {
                     Token::Less
                 }
-            },
+            }
             Some('"') => {
                 let s = self.get_string();
                 Token::String(s)
@@ -232,12 +255,12 @@ impl<'a> Scanner<'a>{
             Some(c) if is_digital(c) => {
                 let dig = self.get_number().unwrap();
                 Token::Digital(dig)
-            },
+            }
 
             Some(c) if is_alpha(c) => {
                 let identifer = self.get_identifier();
                 let token = IDENTIFER_MAP.get(&*identifer);
-                match token{
+                match token {
                     Some(t) => t.clone(),
                     _ => Token::Identifier(identifer),
                 }
@@ -253,12 +276,9 @@ impl<'a> Scanner<'a>{
     }
 }
 
-impl<'a> Iterator for Scanner<'a>{
+impl<'a> Iterator for Scanner<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         self.scan().ok()
     }
 }
-
-
-
