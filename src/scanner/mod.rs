@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use std::{collections::HashMap, error::Error, iter::Peekable, str::Chars};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+pub enum TokenRow {
     Dot,
     Comma,
     Semicolon,
@@ -45,33 +45,44 @@ pub enum Token {
 }
 
 lazy_static! {
-    static ref IDENTIFER_MAP: HashMap<&'static str, Token> = {
+    static ref IDENTIFER_MAP: HashMap<&'static str, TokenRow> = {
         let mut map = HashMap::new();
-        map.insert("let", Token::Let);
-        map.insert("function", Token::Function);
-        map.insert("return", Token::Return);
-        map.insert("if", Token::If);
-        map.insert("else", Token::Else);
-        map.insert("while", Token::While);
-        map.insert("continue", Token::Continue);
-        map.insert("break", Token::Break);
-        map.insert("true", Token::True);
-        map.insert("false", Token::False);
-        map.insert("null", Token::Null);
-        map.insert("this", Token::This);
+        map.insert("let", TokenRow::Let);
+        map.insert("function", TokenRow::Function);
+        map.insert("return", TokenRow::Return);
+        map.insert("if", TokenRow::If);
+        map.insert("else", TokenRow::Else);
+        map.insert("while", TokenRow::While);
+        map.insert("continue", TokenRow::Continue);
+        map.insert("break", TokenRow::Break);
+        map.insert("true", TokenRow::True);
+        map.insert("false", TokenRow::False);
+        map.insert("null", TokenRow::Null);
+        map.insert("this", TokenRow::This);
         map
     };
 }
 
 #[derive(Default, Debug, Clone)]
-struct Position {
-    row: u32,
-    col: u32,
+pub struct Position {
+    row: usize,
+    col: usize,
 }
 
 impl Position {
-    pub fn new(row: u32, col: u32) -> Self {
+    pub fn new(row: usize, col: usize) -> Self {
         Self { row, col }
+    }
+}
+
+#[derive(Debug)]
+pub struct Token{
+    token:TokenRow,
+    position:Position
+}
+impl Token{
+    pub fn new(token:TokenRow,position:Position)->Self{
+        Self{token,position}
     }
 }
 
@@ -91,6 +102,12 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    pub fn get_position(&self)->Position{
+        // let col = self.position.col - self.current_string.len();
+        // Position::new(self.position.row, col)
+        self.position.clone()
+    }
+
     pub fn clear(&mut self) {
         self.current_string.clear();
     }
@@ -102,7 +119,7 @@ impl<'a> Scanner<'a> {
                 self.current_string.push(c);
                 if c == '\n' {
                     self.position.col = 0;
-                    self.position.row = 0;
+                    self.position.row += 1;
                 } else {
                     self.position.col += 1;
                 }
@@ -169,100 +186,90 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn scan(&mut self) -> Result<Token, Option<Token>> {
+        let position = self.get_position();
         let ch = self.advance();
-        let token = match ch {
+        let token_row = match ch {
             Some('.') => {
-                self.clear();
-                Token::Dot
+                TokenRow::Dot
             }
             Some(',') => {
-                self.clear();
-                Token::Comma
+                TokenRow::Comma
             }
             Some(';') => {
-                self.clear();
-                Token::Semicolon
+                TokenRow::Semicolon
             }
             Some('+') => {
-                self.clear();
-                Token::Plus
+                TokenRow::Plus
             }
             Some('-') => {
-                self.clear();
-                Token::Minus
+                TokenRow::Minus
             }
             Some('*') => {
-                self.clear();
-                Token::Start
+                TokenRow::Start
             }
             Some('/') => {
-                self.clear();
-                Token::Div
+                TokenRow::Div
             }
             Some('(') => {
-                self.clear();
-                Token::LeftParent
+                TokenRow::LeftParent
             }
             Some(')') => {
-                self.clear();
-                Token::RightParent
+                TokenRow::RightParent
             }
             Some('{') => {
-                self.clear();
-                Token::LeftBrace
+                TokenRow::LeftBrace
             }
             Some('}') => {
-                self.clear();
-                Token::RightBrace
+                TokenRow::RightBrace
             }
-            Some(' ') => Token::Space(self.get_space()),
+            Some(' ') | Some('\n') | Some('\t') => TokenRow::Space(self.get_space()),
             Some('=') => {
                 if let Some(&'=') = self.get_next() {
                     self.advance();
-                    Token::DoubleEq
+                    TokenRow::DoubleEq
                 } else {
-                    Token::Eq
+                    TokenRow::Eq
                 }
             }
             Some('!') => {
                 if let Some(&'=') = self.get_next() {
                     self.advance();
-                    Token::NotEq
+                    TokenRow::NotEq
                 } else {
-                    Token::Exclamation
+                    TokenRow::Exclamation
                 }
             }
             Some('>') => {
                 if let Some(&'=') = self.get_next() {
                     self.advance();
-                    Token::GreaterEq
+                    TokenRow::GreaterEq
                 } else {
-                    Token::Greater
+                    TokenRow::Greater
                 }
             }
             Some('<') => {
                 if let Some(&'=') = self.get_next() {
                     self.advance();
-                    Token::LessEq
+                    TokenRow::LessEq
                 } else {
-                    Token::Less
+                    TokenRow::Less
                 }
             }
             Some('"') => {
                 let s = self.get_string();
-                Token::String(s)
+                TokenRow::String(s)
             }
             Some(c) if is_digital(c) => {
                 let dig = self.get_number().unwrap();
-                Token::Digital(dig)
+                TokenRow::Digital(dig)
             }
 
             Some(c) if is_alpha(c) => {
                 let identifer = self.get_identifier();
-                let token = IDENTIFER_MAP.get(&*identifer);
-                match token {
+                let token_row = IDENTIFER_MAP.get(&*identifer);
+                match token_row {
                     Some(t) => t.clone(),
-                    _ => Token::Identifier(identifer),
+                    _ => TokenRow::Identifier(identifer),
                 }
             }
 
@@ -272,7 +279,7 @@ impl<'a> Scanner<'a> {
             }
         };
         self.clear();
-        Ok(token)
+        Ok(Token::new(token_row, position))
     }
 }
 
