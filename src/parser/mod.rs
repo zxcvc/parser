@@ -1,9 +1,11 @@
 mod ast;
 
-use super::scanner::{Scanner, Token};
+use self::ast::{PrimaryRow};
+
+use super::scanner::{Position, Scanner, Token, TokenRow};
 use ast::{
-    BinaryExpression, BinaryOpeator, Exp, GroupExpression, Primary, PrimaryExpression,
-    UanryExpression, UnaryOperator,
+    BinaryExpression, BinaryOpeator, Exp, GroupExpression, PrimaryExpression, UanryExpression,
+    UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -16,8 +18,8 @@ impl<'a> Parser {
     pub fn new(s: &'a str) -> Self {
         let scanner = Scanner::new(s);
         let token_list = scanner
-            .filter(|token| match token {
-                &Token::Space(_) => false,
+            .filter(|token| match token.token {
+                TokenRow::Space(_) => false,
                 _ => true,
             })
             .collect();
@@ -40,10 +42,10 @@ impl<'a> Parser {
         self.token_list.get(self.index + n)
     }
 
-    pub fn next_n_match(&self, n_list: Vec<Token>) -> bool {
+    pub fn next_n_match(&self, n_list: Vec<TokenRow>) -> bool {
         let token = self.peek_n(0);
         if let Some(token) = token {
-            return n_list.iter().any(|x| *x == *token);
+            return n_list.iter().any(|x| *x == token.token);
         }
         false
     }
@@ -58,14 +60,10 @@ impl<'a> Parser {
 
     pub fn equality(&mut self) -> Option<Box<dyn Exp>> {
         let mut left: Box<dyn Exp> = self.comprsion().unwrap();
-        while self.next_n_match(vec![Token::DoubleEq, Token::NotEq]) {
+        while self.next_n_match(vec![TokenRow::DoubleEq, TokenRow::NotEq]) {
             let op = self.advance().unwrap();
             let right = self.comprsion().unwrap();
-            let op = match op {
-                Token::DoubleEq => BinaryOpeator::Eq,
-                Token::NotEq => BinaryOpeator::NotEq,
-                _ => return None,
-            };
+            let op = BinaryOpeator::new(op);
             left = BinaryExpression::new(op, left, right);
         }
         Some(left)
@@ -74,20 +72,14 @@ impl<'a> Parser {
     pub fn comprsion(&mut self) -> Option<Box<dyn Exp>> {
         let mut left: Box<dyn Exp> = self.term().unwrap();
         while self.next_n_match(vec![
-            Token::Greater,
-            Token::GreaterEq,
-            Token::Less,
-            Token::LessEq,
+            TokenRow::Greater,
+            TokenRow::GreaterEq,
+            TokenRow::Less,
+            TokenRow::LessEq,
         ]) {
             let op = self.advance().unwrap();
             let right = self.term().unwrap();
-            let op = match op {
-                Token::Greater => BinaryOpeator::Greater,
-                Token::GreaterEq => BinaryOpeator::GreaterEq,
-                Token::Less => BinaryOpeator::Less,
-                Token::LessEq => BinaryOpeator::LessEq,
-                _ => return None,
-            };
+            let op = BinaryOpeator::new(op);
             left = BinaryExpression::new(op, left, right);
         }
         Some(left)
@@ -95,14 +87,10 @@ impl<'a> Parser {
 
     pub fn term(&mut self) -> Option<Box<dyn Exp>> {
         let mut left: Box<dyn Exp> = self.factor().unwrap();
-        while self.next_n_match(vec![Token::Plus, Token::Minus]) {
+        while self.next_n_match(vec![TokenRow::Plus, TokenRow::Minus]) {
             let op = self.advance().unwrap();
             let right = self.factor().unwrap();
-            let op = match op {
-                Token::Plus => BinaryOpeator::Plus,
-                Token::Minus => BinaryOpeator::Minus,
-                _ => return None,
-            };
+            let op = BinaryOpeator::new(op);
             left = BinaryExpression::new(op, left, right);
         }
         Some(left)
@@ -110,29 +98,21 @@ impl<'a> Parser {
 
     pub fn factor(&mut self) -> Option<Box<dyn Exp>> {
         let mut left: Box<dyn Exp> = self.unary().unwrap();
-        while self.next_n_match(vec![Token::Start, Token::Div]) {
+        while self.next_n_match(vec![TokenRow::Start, TokenRow::Div]) {
             let op = self.advance().unwrap();
             let right = self.unary().unwrap();
-            let op = match op {
-                Token::Start => BinaryOpeator::Multip,
-                Token::Div => BinaryOpeator::Div,
-                _ => return None,
-            };
+            let op = BinaryOpeator::new(op);
             left = BinaryExpression::new(op, left, right);
         }
         Some(left)
     }
 
     pub fn unary(&mut self) -> Option<Box<dyn Exp>> {
-        if self.next_n_match(vec![Token::Minus, Token::Exclamation]) {
+        if self.next_n_match(vec![TokenRow::Minus, TokenRow::Exclamation]) {
             let mut exp: Option<Box<dyn Exp>> = None;
-            while self.next_n_match(vec![Token::Minus, Token::Exclamation]) {
+            while self.next_n_match(vec![TokenRow::Minus, TokenRow::Exclamation]) {
                 let op = self.advance().unwrap();
-                let op = match op {
-                    Token::Exclamation => UnaryOperator::Not,
-                    Token::Minus => UnaryOperator::Negative,
-                    _ => return None,
-                };
+                let op = UnaryOperator::new(op);
                 let e = self.unary().unwrap();
                 exp = Some(UanryExpression::new(op, e));
             }
@@ -148,36 +128,53 @@ impl<'a> Parser {
 
     pub fn primary(&mut self) -> Option<Box<dyn Exp>> {
         let prim = match self.peek_n(0) {
-            Some(&Token::Digital(n)) => Primary::Number(n),
-            Some(&Token::String(ref s)) => Primary::String(s.clone()),
-            Some(&Token::True) => Primary::True,
-            Some(&Token::False) => Primary::False,
-            Some(&Token::Null) => Primary::Null,
-            Some(&Token::LeftParent) => {
-                // self.advance();
-                // let e = self.expresson();
-                // if let Some(&Token::RightParent) = self.peek_n(0) {
-                //     Primary::Group(GroupExpression::new(e.unwrap()))
-                // } else {
-                //     return None;
-                // }
-                // let group = self.group();
+            Some(&Token {
+                token: TokenRow::Digital(n),
+                position: _,
+            }) => PrimaryRow::Number(n),
+            Some(&Token {
+                token: TokenRow::String(ref s),
+                position: _,
+            }) => PrimaryRow::String(s.clone()),
+            Some(&Token {
+                token: TokenRow::True,
+                position: _,
+            }) => PrimaryRow::True,
+            Some(&Token {
+                token: TokenRow::False,
+                position: _,
+            }) => PrimaryRow::False,
+            Some(&Token {
+                token: TokenRow::Null,
+                position: _,
+            }) => PrimaryRow::Null,
+            Some(&Token {
+                token: TokenRow::LeftParent,
+                position: _,
+            }) => {
                 return self.group();
             }
             _ => return None,
         };
-        self.advance();
-        let exp = PrimaryExpression::new(prim);
+        let token = self.advance().unwrap();
+        let exp = PrimaryExpression::new(prim, token.position);
         Some(exp)
     }
 
     pub fn group(&mut self) -> Option<Box<dyn Exp>> {
-        if let Some(Token::LeftParent) = self.peek_n(0) {
-            self.advance();
+        if let Some(Token {
+            token: TokenRow::LeftParent,
+            position: _,
+        }) = self.peek_n(0)
+        {
+            let left_parent = self.advance().unwrap();
             let exp = self.expresson();
-            self.advance();
+            let right_parent = self.advance().unwrap();
             if let Some(e) = exp {
-                return Some(GroupExpression::new(e));
+                return Some(GroupExpression::new(
+                    e,
+                    (left_parent.position, right_parent.position),
+                ));
             }
         }
         None

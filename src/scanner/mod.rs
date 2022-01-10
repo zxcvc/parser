@@ -63,10 +63,10 @@ lazy_static! {
     };
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Position {
-    row: usize,
-    col: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 impl Position {
@@ -75,14 +75,14 @@ impl Position {
     }
 }
 
-#[derive(Debug)]
-pub struct Token{
-    token:TokenRow,
-    position:Position
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub token: TokenRow,
+    pub position: Position,
 }
-impl Token{
-    pub fn new(token:TokenRow,position:Position)->Self{
-        Self{token,position}
+impl Token {
+    pub fn new(token: TokenRow, position: Position) -> Self {
+        Self { token, position }
     }
 }
 
@@ -102,7 +102,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn get_position(&self)->Position{
+    pub fn get_position(&self) -> Position {
         // let col = self.position.col - self.current_string.len();
         // Position::new(self.position.row, col)
         self.position.clone()
@@ -189,39 +189,17 @@ impl<'a> Scanner<'a> {
         let position = self.get_position();
         let ch = self.advance();
         let token_row = match ch {
-            Some('.') => {
-                TokenRow::Dot
-            }
-            Some(',') => {
-                TokenRow::Comma
-            }
-            Some(';') => {
-                TokenRow::Semicolon
-            }
-            Some('+') => {
-                TokenRow::Plus
-            }
-            Some('-') => {
-                TokenRow::Minus
-            }
-            Some('*') => {
-                TokenRow::Start
-            }
-            Some('/') => {
-                TokenRow::Div
-            }
-            Some('(') => {
-                TokenRow::LeftParent
-            }
-            Some(')') => {
-                TokenRow::RightParent
-            }
-            Some('{') => {
-                TokenRow::LeftBrace
-            }
-            Some('}') => {
-                TokenRow::RightBrace
-            }
+            Some('.') => TokenRow::Dot,
+            Some(',') => TokenRow::Comma,
+            Some(';') => TokenRow::Semicolon,
+            Some('+') => TokenRow::Plus,
+            Some('-') => TokenRow::Minus,
+            Some('*') => TokenRow::Start,
+            Some('/') => TokenRow::Div,
+            Some('(') => TokenRow::LeftParent,
+            Some(')') => TokenRow::RightParent,
+            Some('{') => TokenRow::LeftBrace,
+            Some('}') => TokenRow::RightBrace,
             Some(' ') | Some('\n') | Some('\t') => TokenRow::Space(self.get_space()),
             Some('=') => {
                 if let Some(&'=') = self.get_next() {
