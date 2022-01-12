@@ -1,6 +1,29 @@
+use self::error::ScanError;
+
 use super::utils::{is_alpha, is_alphadigital, is_digital, is_space};
 use lazy_static::lazy_static;
 use std::{collections::HashMap, error::Error, iter::Peekable, str::Chars};
+
+pub mod error {
+    use super::Position;
+
+    #[derive(Debug, Clone)]
+    pub struct ScanError {
+        pub code: i32,
+        pub describe: String,
+        pub position: Position,
+    }
+
+    impl From<Position> for ScanError {
+        fn from(position: Position) -> Self {
+            Self {
+                code: 300,
+                describe: "unexpected char".to_string(),
+                position,
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenRow {
@@ -185,7 +208,7 @@ impl<'a> Scanner<'a> {
         space
     }
 
-    pub fn scan(&mut self) -> Result<Token, Option<Token>> {
+    pub fn scan(&mut self) -> Option<Result<Token, ScanError>> {
         let position = self.get_position();
         let ch = self.advance();
         let token_row = match ch {
@@ -253,17 +276,17 @@ impl<'a> Scanner<'a> {
 
             _ => {
                 self.clear();
-                return Err(None);
+                return None;
             }
         };
         self.clear();
-        Ok(Token::new(token_row, position))
+        Some(Ok(Token::new(token_row, position)))
     }
 }
 
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Token;
+    type Item = Result<Token, ScanError>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.scan().ok()
+        self.scan()
     }
 }

@@ -1,5 +1,36 @@
 use super::{Position, Token, TokenRow};
+use error::ParseError;
 use std::fmt::Debug;
+
+pub mod error {
+    use crate::scanner::{Position, Token};
+
+    #[derive(Debug, Clone)]
+    pub struct ParseError {
+        pub code: i32,
+        pub describe: String,
+        pub position: super::Position,
+    }
+
+    impl From<Position> for ParseError {
+        fn from(position: Position) -> Self {
+            Self {
+                code: 400,
+                describe: "unexpected token".to_string(),
+                position,
+            }
+        }
+    }
+    impl From<Token> for ParseError {
+        fn from(token: Token) -> Self {
+            Self {
+                code: 400,
+                describe: "unexpected token".to_string(),
+                position: token.position,
+            }
+        }
+    }
+}
 
 pub trait Exp: Debug {
     fn get_position(&self) -> (Position, Position);
@@ -235,11 +266,7 @@ impl<T: Exp + 'static, U: Exp + 'static> BinaryExpression<T, U> {
 impl<T: Exp + 'static> GroupExpression<T> {
     pub fn new(exp: T, position: (Position, Position)) -> Box<dyn Exp> {
         let (start, end) = position;
-        let e = Self {
-            exp,
-            start,
-            end,
-        };
+        let e = Self { exp, start, end };
         Box::new(e)
     }
 }
