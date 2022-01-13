@@ -31,7 +31,7 @@ pub mod error {
 }
 
 pub mod Exppression {
-    use super::error::ParseError;
+    
     use super::{Position, Token, TokenRow};
     use std::fmt::Debug;
 
@@ -229,7 +229,7 @@ pub mod Exppression {
         pub fn new(exp: PrimaryRow, position: Position) -> Box<dyn Exp> {
             let op_len = exp.len().saturating_sub(1);
             let e = Self {
-                exp: exp,
+                exp,
                 start: position.clone(),
                 end: Position::new(position.row, position.col + op_len),
             };
@@ -294,7 +294,7 @@ pub mod StateMent{
             Self{
                 exp,
                 start,
-                end:semicolon_token.position.clone(),
+                end:semicolon_token.position,
             }
         }
     }

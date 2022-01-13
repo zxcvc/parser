@@ -184,7 +184,7 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn get_number(&mut self) -> Result<f64, impl Error> {
-        self.advance_until_by(&|ch| is_digital(ch));
+        self.advance_until_by(&is_digital);
         let digital = self.current_string.clone();
         digital.parse::<f64>()
     }
@@ -197,15 +197,15 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn get_identifier(&mut self) -> String {
-        self.advance_until_by(&|ch| is_alphadigital(ch));
-        let s = self.current_string.clone();
-        s
+        self.advance_until_by(&is_alphadigital);
+        
+        self.current_string.clone()
     }
 
     pub fn get_space(&mut self) -> String {
-        self.advance_until_by(&|ch| is_space(ch));
-        let space = self.current_string.clone();
-        space
+        self.advance_until_by(&is_space);
+        
+        self.current_string.clone()
     }
 
     pub fn scan(&mut self) -> Option<Result<Token, ScanError>> {

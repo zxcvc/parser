@@ -133,14 +133,14 @@ impl<'a> Parser {
                 let e = self.unary()?;
                 exp = Ok(UanryExpression::new(op, e));
             }
-            return exp;
+            exp
         } else {
             self.primary()
         }
     }
 
     pub fn primary(&mut self) -> Result<Box<dyn Exp>, AllError> {
-        let next_token = self.peek_n(0).clone();
+        let next_token = self.peek_n(0);
         let prim = match next_token {
             Some(v) => match (v.clone())? {
                 Token {
@@ -174,13 +174,13 @@ impl<'a> Parser {
             ));
         } else {
             let next_token = self.peek_n(0);
-            return match next_token {
+            match next_token {
                 None => Err(NoContentError::new().into()),
                 Some(res) => match res {
                     Ok(token) => Err(ParseError::from(token.position.clone()).into()),
                     Err(err) => Err(ParseError::from(err.position.clone()).into()),
                 },
-            };
+            }
         }
     }
 
