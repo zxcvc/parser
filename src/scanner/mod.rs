@@ -29,7 +29,7 @@ pub mod error {
 pub enum TokenRow {
     Dot,
     Comma,
-    Semicolon,
+    Semicolon,//分号
     Plus,
     Minus,
     Start,

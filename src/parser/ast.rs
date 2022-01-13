@@ -274,3 +274,30 @@ pub mod Exppression {
         }
     }
 }
+
+pub mod StateMent{
+    use std::fmt::Debug;
+    use super::{Position,Token};
+    use super::Exppression::Exp;
+    pub trait StateMent:Debug {}
+
+    #[derive(Debug)]
+    pub struct ExpressionStatement{
+        pub exp:Box<dyn Exp>,
+        pub start:Position,
+        pub end:Position,
+    }
+
+    impl ExpressionStatement{
+        pub fn new(exp:Box<dyn Exp>,semicolon_token:Token)->Self{
+            let start = exp.get_position().0;
+            Self{
+                exp,
+                start,
+                end:semicolon_token.position.clone(),
+            }
+        }
+    }
+
+    impl StateMent for ExpressionStatement{}
+}

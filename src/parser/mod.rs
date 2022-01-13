@@ -7,6 +7,7 @@ use ast::Exppression::{
     BinaryExpression, BinaryOpeator, Exp, GroupExpression, PrimaryExpression, UanryExpression,
     UnaryOperator,
 };
+use ast::StateMent::{StateMent,ExpressionStatement};
 
 #[derive(Debug)]
 pub struct Parser {
@@ -33,12 +34,16 @@ impl<'a> Parser {
     }
 
     pub fn advance(&mut self) -> Option<Result<Token, ScanError>> {
-        if self.index >= self.token_list.len() {
+        if self.is_end() {
             return None;
         }
         let token = self.token_list[self.index].clone();
         self.index += 1;
         Some(token)
+    }
+
+    pub fn is_end(&self)->bool{
+        self.index >= self.token_list.len()
     }
 
     pub fn peek_n(&self, n: usize) -> Option<&Result<Token, ScanError>> {
@@ -56,6 +61,15 @@ impl<'a> Parser {
         }
     }
 
+    pub fn expect(&self,position:Position,expected:&'static str)->Result<bool,AllError>{
+        let position = Position{col:position.col+1,..position};
+        let next = self.peek_n(0);
+        match next{
+            Some(Ok(Token { token:TokenRow::Semicolon, position:_})) => Ok(true),
+            _ => Err(ParseError{code:400,position,describe:format!(r#""{}" is expected"#,expected)}.into()),
+        }
+    }
+    
     pub fn expresson(&mut self) -> Result<Box<dyn Exp>, AllError> {
         self.equality()
     }
@@ -170,4 +184,26 @@ impl<'a> Parser {
         }
     }
 
+    pub fn statement(&mut self)->Result<Box<dyn StateMent>,AllError>{
+        self.expression_statement()
+    }
+
+    pub fn expression_statement(&mut self)->Result<Box<dyn StateMent>,AllError>{
+        let exp = self.expresson()?;
+        self.expect(exp.get_position().1, ";")?;
+        let mut semi = None;
+        while self.next_n_match(vec![TokenRow::Semicolon])? {
+            semi = self.advance();
+        };
+        let statement = ExpressionStatement::new(exp, semi.unwrap()?);
+        Ok(Box::new(statement))
+    }
+
+    pub fn programing(&mut self)->Result<Vec<Box<dyn StateMent>>,AllError>{
+        let mut programing = vec![];
+        while !self.is_end(){
+            programing.push(self.statement()?);
+        }
+        Ok(programing)
+    }
 }
