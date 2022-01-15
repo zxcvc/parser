@@ -1,6 +1,3 @@
-
-
-
 pub fn is_space(ch: char) -> bool {
     match ch {
         ' ' | '\t' | '\n' => true,
@@ -28,4 +25,3 @@ pub fn is_alpha(ch: char) -> bool {
 pub fn is_alphadigital(ch: char) -> bool {
     is_alpha(ch) || is_digital(ch)
 }
-

@@ -29,7 +29,7 @@ pub mod error {
 pub enum TokenRow {
     Dot,
     Comma,
-    Semicolon,//分号
+    Semicolon, //分号
     Plus,
     Minus,
     Start,
@@ -58,6 +58,7 @@ pub enum TokenRow {
     Return,
     If,
     Else,
+    For,
     While,
     Continue,
     Break,
@@ -75,6 +76,7 @@ lazy_static! {
         map.insert("return", TokenRow::Return);
         map.insert("if", TokenRow::If);
         map.insert("else", TokenRow::Else);
+        map.insert("for", TokenRow::For);
         map.insert("while", TokenRow::While);
         map.insert("continue", TokenRow::Continue);
         map.insert("break", TokenRow::Break);
@@ -198,13 +200,13 @@ impl<'a> Scanner<'a> {
 
     pub fn get_identifier(&mut self) -> String {
         self.advance_until_by(&is_alphadigital);
-        
+
         self.current_string.clone()
     }
 
     pub fn get_space(&mut self) -> String {
         self.advance_until_by(&is_space);
-        
+
         self.current_string.clone()
     }
 

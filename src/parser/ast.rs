@@ -31,7 +31,7 @@ pub mod error {
 }
 
 pub mod Exppression {
-    
+
     use super::{Position, Token, TokenRow};
     use std::fmt::Debug;
 
@@ -275,29 +275,116 @@ pub mod Exppression {
     }
 }
 
-pub mod StateMent{
+pub mod StateMent {
+    use crate::scanner::TokenRow;
     use std::fmt::Debug;
-    use super::{Position,Token};
+
+    use super::right_value::{RightValue, RightValueExpression};
     use super::Exppression::Exp;
-    pub trait StateMent:Debug {}
+    use super::{Position, Token};
+    pub trait StateMent: Debug {}
 
     #[derive(Debug)]
-    pub struct ExpressionStatement{
-        pub exp:Box<dyn Exp>,
-        pub start:Position,
-        pub end:Position,
+    pub struct ExpressionStatement {
+        pub exp: Box<dyn Exp>,
+        pub start: Position,
+        pub end: Position,
     }
 
-    impl ExpressionStatement{
-        pub fn new(exp:Box<dyn Exp>,semicolon_token:Token)->Self{
+    #[derive(Debug)]
+    pub struct DeclareStatement {
+        pub variable_name: String,
+        pub value: RightValueExpression,
+        pub start: Position,
+        pub end: Position,
+    }
+
+    #[derive(Debug)]
+    pub struct AssignStatement {
+        pub variable_name: String,
+        pub value: RightValueExpression,
+        pub start: Position,
+        pub end: Position,
+    }
+
+    impl ExpressionStatement {
+        pub fn new(exp: Box<dyn Exp>, semicolon_token: Token) -> Self {
             let start = exp.get_position().0;
-            Self{
+            Self {
                 exp,
                 start,
-                end:semicolon_token.position,
+                end: semicolon_token.position,
             }
         }
     }
 
-    impl StateMent for ExpressionStatement{}
+    impl DeclareStatement {
+        pub fn new(
+            variable_token: TokenRow,
+            value: RightValueExpression,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                variable_name: match variable_token {
+                    TokenRow::Identifier(s) => s,
+                    _ => Default::default(),
+                },
+                value,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
+    impl AssignStatement {
+        pub fn new(
+            variable_token: TokenRow,
+            value: RightValueExpression,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                variable_name: match variable_token {
+                    TokenRow::Identifier(s) => s,
+                    _ => Default::default(),
+                },
+                value,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
+    impl StateMent for ExpressionStatement {}
+    impl StateMent for DeclareStatement {}
+    impl StateMent for AssignStatement {}
+
+    impl From<AssignStatement> for DeclareStatement {
+        fn from(assing_statement: AssignStatement) -> Self {
+            Self {
+                variable_name: assing_statement.variable_name,
+                value: assing_statement.value,
+                start: assing_statement.start,
+                end: assing_statement.end,
+            }
+        }
+    }
+}
+
+pub mod right_value {
+    use std::fmt::Debug;
+
+    use super::Exppression::Exp;
+
+    pub trait RightValue: Debug {}
+
+    #[derive(Debug)]
+    pub struct RightValueExpression(pub Box<dyn Exp>);
+
+    impl From<Box<dyn Exp>> for RightValueExpression {
+        fn from(expression: Box<dyn Exp>) -> Self {
+            Self(expression)
+        }
+    }
+
+    impl<T: Exp> RightValue for T {}
 }
