@@ -3,11 +3,11 @@ pub mod ast;
 use std::ptr::slice_from_raw_parts;
 
 use self::ast::right_value;
-use self::ast::{error::ParseError, Exppression::PrimaryRow};
+use self::ast::{error::ParseError, Expression::PrimaryRow};
 use super::error::{NoContentError, SyntaxError as AllError};
 use super::scanner::{error::ScanError, Position, Scanner, Token, TokenRow};
 use ast::right_value::{RightValue, RightValueExpression};
-use ast::Exppression::{
+use ast::Expression::{
     BinaryExpression, BinaryOpeator, Exp, GroupExpression, PrimaryExpression, UanryExpression,
     UnaryOperator,
 };

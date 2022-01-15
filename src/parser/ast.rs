@@ -30,7 +30,7 @@ pub mod error {
     }
 }
 
-pub mod Exppression {
+pub mod Expression {
 
     use super::{Position, Token, TokenRow};
     use std::fmt::Debug;
@@ -280,7 +280,7 @@ pub mod StateMent {
     use std::fmt::Debug;
 
     use super::right_value::{RightValue, RightValueExpression};
-    use super::Exppression::Exp;
+    use super::Expression::Exp;
     use super::{Position, Token};
     pub trait StateMent: Debug {}
 
@@ -373,7 +373,7 @@ pub mod StateMent {
 pub mod right_value {
     use std::fmt::Debug;
 
-    use super::Exppression::Exp;
+    use super::Expression::Exp;
 
     pub trait RightValue: Debug {}
 
