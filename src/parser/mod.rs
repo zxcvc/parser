@@ -11,7 +11,9 @@ use ast::Expression::{
     BinaryExpression, BinaryOpeator, Exp, GroupExpression, PrimaryExpression, UanryExpression,
     UnaryOperator,
 };
-use ast::StateMent::{AssignStatement, DeclareStatement, ExpressionStatement, StateMent};
+use ast::StateMent::{
+    AssignStatement, DeclareStatement, ExpressionStatement, IfStatement, StateMent,
+};
 
 #[derive(Debug)]
 pub struct Parser {
@@ -312,7 +314,25 @@ impl<'a> Parser {
     }
 
     pub fn if_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
-        todo!()
+        let for_token = self.advance().unwrap()?;
+        self.expect(for_token.position.clone(), TokenRow::LeftParent)?;
+        self.advance();
+        let condition = self.expresson()?;
+        self.expect(condition.get_position().1, TokenRow::RightParent)?;
+        let right_parent = self.advance().unwrap()?;
+        self.expect(right_parent.position, TokenRow::LeftBrace)?;
+        self.advance();
+        let mut body = vec![];
+        while !self.next_n_match(vec![TokenRow::RightBrace])? {
+            body.push(self.statement()?);
+        }
+        let right_brace = self.advance().unwrap()?;
+        let if_statement = IfStatement::new(
+            condition,
+            body,
+            (for_token.position.clone(), right_brace.position),
+        );
+        Ok(Box::new(if_statement))
     }
 
     pub fn for_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {

@@ -307,6 +307,14 @@ pub mod StateMent {
         pub end: Position,
     }
 
+    #[derive(Debug)]
+    pub struct IfStatement {
+        pub condition: Box<dyn Exp>,
+        pub body: Vec<Box<dyn StateMent>>,
+        pub start: Position,
+        pub end: Position,
+    }
+
     impl ExpressionStatement {
         pub fn new(exp: Box<dyn Exp>, semicolon_token: Token) -> Self {
             let start = exp.get_position().0;
@@ -354,9 +362,25 @@ pub mod StateMent {
         }
     }
 
+    impl IfStatement {
+        pub fn new(
+            condition: Box<dyn Exp>,
+            body: Vec<Box<dyn StateMent>>,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                condition,
+                body,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
     impl StateMent for ExpressionStatement {}
     impl StateMent for DeclareStatement {}
     impl StateMent for AssignStatement {}
+    impl StateMent for IfStatement {}
 
     impl From<AssignStatement> for DeclareStatement {
         fn from(assing_statement: AssignStatement) -> Self {

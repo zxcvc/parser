@@ -5,7 +5,8 @@ mod utils;
 
 use parser::Parser;
 fn main() {
-    let mut parser = Parser::new(r#"let a = 1;a = 2;let c = 2;let bb = 222;let d = 2;d = 2;"#);
+    let mut parser =
+        Parser::new(r#"if(2/1+1){1+3;if(1){1;}} 1+2;-1/2;let a = 2;a = 2;if (2){let c = 5;}"#);
     let res = parser.programing();
     dbg!(res);
 }
