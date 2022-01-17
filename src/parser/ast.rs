@@ -283,7 +283,7 @@ pub mod StateMent {
     use super::Expression::Exp;
     use super::{Position, Token};
     pub trait StateMent: Debug {
-        fn get_position(&self)->(Position,Position);
+        fn get_position(&self) -> (Position, Position);
     }
     #[derive(Debug)]
     pub struct ExpressionStatement {
@@ -312,16 +312,24 @@ pub mod StateMent {
     pub struct IfStatement {
         pub condition: Box<dyn Exp>,
         pub then_branch: Box<dyn StateMent>,
-        pub else_branch:Option<Box<dyn StateMent>>,
+        pub else_branch: Option<Box<dyn StateMent>>,
         pub start: Position,
         pub end: Position,
     }
 
     #[derive(Debug)]
-    pub struct  Block{
-        pub body:Vec<Box<dyn StateMent>>,
-        pub start:Position,
-        pub end:Position,
+    pub struct WhileStatement {
+        pub condition: Box<dyn Exp>,
+        pub body: Box<dyn StateMent>,
+        pub start: Position,
+        pub end: Position,
+    }
+
+    #[derive(Debug)]
+    pub struct Block {
+        pub body: Vec<Box<dyn StateMent>>,
+        pub start: Position,
+        pub end: Position,
     }
 
     impl ExpressionStatement {
@@ -375,7 +383,7 @@ pub mod StateMent {
         pub fn new(
             condition: Box<dyn Exp>,
             then_branch: Box<dyn StateMent>,
-            else_branch:Option<Box<dyn StateMent>>,
+            else_branch: Option<Box<dyn StateMent>>,
             position: (Position, Position),
         ) -> Self {
             Self {
@@ -388,40 +396,59 @@ pub mod StateMent {
         }
     }
 
-    impl Block{
-        pub fn new(statements:Vec<Box<dyn StateMent>>,position:(Position,Position))->Self{
-            Self{
-                body:statements,
-                start:position.0,
-                end:position.1,
+    impl WhileStatement {
+        pub fn new(
+            condition: Box<dyn Exp>,
+            body: Box<dyn StateMent>,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                condition,
+                body,
+                start: position.0,
+                end: position.1,
             }
         }
     }
 
+    impl Block {
+        pub fn new(statements: Vec<Box<dyn StateMent>>, position: (Position, Position)) -> Self {
+            Self {
+                body: statements,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
 
     impl StateMent for ExpressionStatement {
-        fn get_position(&self)->(Position,Position) {
-        (self.start.clone(),self.end.clone())
-    }
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
     }
     impl StateMent for DeclareStatement {
-        fn get_position(&self)->(Position,Position) {
-            (self.start.clone(),self.end.clone())
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
         }
     }
     impl StateMent for AssignStatement {
-        fn get_position(&self)->(Position,Position) {
-            (self.start.clone(),self.end.clone())
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
         }
     }
     impl StateMent for IfStatement {
-        fn get_position(&self)->(Position,Position) {
-            (self.start.clone(),self.end.clone())
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
+    }
+    impl StateMent for WhileStatement {
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
         }
     }
     impl StateMent for Block {
-        fn get_position(&self)->(Position,Position) {
-            (self.start.clone(),self.end.clone())
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
         }
     }
 

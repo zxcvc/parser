@@ -1,8 +1,4 @@
 pub mod ast;
-
-use std::ptr::slice_from_raw_parts;
-
-use self::ast::right_value;
 use self::ast::{error::ParseError, Expression::PrimaryRow};
 use super::error::{NoContentError, SyntaxError as AllError};
 use super::scanner::{error::ScanError, Position, Scanner, Token, TokenRow};
@@ -12,7 +8,8 @@ use ast::Expression::{
     UnaryOperator,
 };
 use ast::StateMent::{
-    AssignStatement, DeclareStatement, ExpressionStatement, IfStatement, StateMent,Block,
+    AssignStatement, Block, DeclareStatement, ExpressionStatement, IfStatement, StateMent,
+    WhileStatement,
 };
 
 #[derive(Debug)]
@@ -324,13 +321,18 @@ impl<'a> Parser {
         let then_branch = self.statement()?;
         let mut end_position = then_branch.get_position().1;
         let mut else_branch = None;
-        if self.next_n_match(vec![ TokenRow::Else])?{
+        if self.next_n_match(vec![TokenRow::Else])? {
             self.advance().unwrap()?;
             let _else_branch = self.statement()?;
             end_position = _else_branch.get_position().1;
             else_branch = Some(_else_branch);
         }
-        let if_statement = IfStatement::new(condition,then_branch,else_branch,(if_token.position.clone(),end_position));
+        let if_statement = IfStatement::new(
+            condition,
+            then_branch,
+            else_branch,
+            (if_token.position.clone(), end_position),
+        );
         Ok(Box::new(if_statement))
     }
 
@@ -339,7 +341,20 @@ impl<'a> Parser {
     }
 
     pub fn while_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
-        todo!()
+        let while_token = self.advance().unwrap()?;
+        self.expect(while_token.position.clone(), TokenRow::LeftParent)?;
+        self.advance();
+        let condition = self.expresson()?;
+        self.expect(condition.get_position().1, TokenRow::RightParent)?;
+        self.advance();
+        let body = self.statement()?;
+        let end_position = body.get_position().1;
+        let while_statement = WhileStatement::new(
+            condition,
+            body,
+            (while_token.position.clone(), end_position),
+        );
+        Ok(Box::new(while_statement))
     }
 
     pub fn return_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
@@ -354,14 +369,17 @@ impl<'a> Parser {
         Ok(Box::new(statement))
     }
 
-    pub fn block(&mut self)->Result<Box<dyn StateMent>,AllError>{
+    pub fn block(&mut self) -> Result<Box<dyn StateMent>, AllError> {
         let left_brace = self.advance().unwrap()?;
         let mut body = vec![];
         while !self.next_n_match(vec![TokenRow::RightBrace])? {
             body.push(self.statement()?);
         }
         let right_brace = self.advance().unwrap()?;
-        let block = Block::new(body,(left_brace.position.clone(),right_brace.position.clone()));
+        let block = Block::new(
+            body,
+            (left_brace.position.clone(), right_brace.position.clone()),
+        );
         Ok(Box::new(block))
     }
 
