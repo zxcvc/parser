@@ -282,8 +282,9 @@ pub mod StateMent {
     use super::right_value::{RightValue, RightValueExpression};
     use super::Expression::Exp;
     use super::{Position, Token};
-    pub trait StateMent: Debug {}
-
+    pub trait StateMent: Debug {
+        fn get_position(&self)->(Position,Position);
+    }
     #[derive(Debug)]
     pub struct ExpressionStatement {
         pub exp: Box<dyn Exp>,
@@ -310,9 +311,17 @@ pub mod StateMent {
     #[derive(Debug)]
     pub struct IfStatement {
         pub condition: Box<dyn Exp>,
-        pub body: Vec<Box<dyn StateMent>>,
+        pub then_branch: Box<dyn StateMent>,
+        pub else_branch:Option<Box<dyn StateMent>>,
         pub start: Position,
         pub end: Position,
+    }
+
+    #[derive(Debug)]
+    pub struct  Block{
+        pub body:Vec<Box<dyn StateMent>>,
+        pub start:Position,
+        pub end:Position,
     }
 
     impl ExpressionStatement {
@@ -365,22 +374,56 @@ pub mod StateMent {
     impl IfStatement {
         pub fn new(
             condition: Box<dyn Exp>,
-            body: Vec<Box<dyn StateMent>>,
+            then_branch: Box<dyn StateMent>,
+            else_branch:Option<Box<dyn StateMent>>,
             position: (Position, Position),
         ) -> Self {
             Self {
                 condition,
-                body,
+                then_branch,
+                else_branch,
                 start: position.0,
                 end: position.1,
             }
         }
     }
 
-    impl StateMent for ExpressionStatement {}
-    impl StateMent for DeclareStatement {}
-    impl StateMent for AssignStatement {}
-    impl StateMent for IfStatement {}
+    impl Block{
+        pub fn new(statements:Vec<Box<dyn StateMent>>,position:(Position,Position))->Self{
+            Self{
+                body:statements,
+                start:position.0,
+                end:position.1,
+            }
+        }
+    }
+
+
+    impl StateMent for ExpressionStatement {
+        fn get_position(&self)->(Position,Position) {
+        (self.start.clone(),self.end.clone())
+    }
+    }
+    impl StateMent for DeclareStatement {
+        fn get_position(&self)->(Position,Position) {
+            (self.start.clone(),self.end.clone())
+        }
+    }
+    impl StateMent for AssignStatement {
+        fn get_position(&self)->(Position,Position) {
+            (self.start.clone(),self.end.clone())
+        }
+    }
+    impl StateMent for IfStatement {
+        fn get_position(&self)->(Position,Position) {
+            (self.start.clone(),self.end.clone())
+        }
+    }
+    impl StateMent for Block {
+        fn get_position(&self)->(Position,Position) {
+            (self.start.clone(),self.end.clone())
+        }
+    }
 
     impl From<AssignStatement> for DeclareStatement {
         fn from(assing_statement: AssignStatement) -> Self {

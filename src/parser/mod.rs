@@ -12,7 +12,7 @@ use ast::Expression::{
     UnaryOperator,
 };
 use ast::StateMent::{
-    AssignStatement, DeclareStatement, ExpressionStatement, IfStatement, StateMent,
+    AssignStatement, DeclareStatement, ExpressionStatement, IfStatement, StateMent,Block,
 };
 
 #[derive(Debug)]
@@ -266,6 +266,7 @@ impl<'a> Parser {
                     TokenRow::For => self.for_statement(),
                     TokenRow::While => self.while_statement(),
                     TokenRow::Return => self.return_statement(),
+                    TokenRow::LeftBrace => self.block(),
                     _ => self.expression_statement(),
                 },
             },
@@ -314,24 +315,22 @@ impl<'a> Parser {
     }
 
     pub fn if_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
-        let for_token = self.advance().unwrap()?;
-        self.expect(for_token.position.clone(), TokenRow::LeftParent)?;
+        let if_token = self.advance().unwrap()?;
+        self.expect(if_token.position.clone(), TokenRow::LeftParent)?;
         self.advance();
         let condition = self.expresson()?;
-        self.expect(condition.get_position().1, TokenRow::RightParent)?;
-        let right_parent = self.advance().unwrap()?;
-        self.expect(right_parent.position, TokenRow::LeftBrace)?;
+        self.expect(if_token.position.clone(), TokenRow::RightParent)?;
         self.advance();
-        let mut body = vec![];
-        while !self.next_n_match(vec![TokenRow::RightBrace])? {
-            body.push(self.statement()?);
+        let then_branch = self.statement()?;
+        let mut end_position = then_branch.get_position().1;
+        let mut else_branch = None;
+        if self.next_n_match(vec![ TokenRow::Else])?{
+            self.advance().unwrap()?;
+            let _else_branch = self.statement()?;
+            end_position = _else_branch.get_position().1;
+            else_branch = Some(_else_branch);
         }
-        let right_brace = self.advance().unwrap()?;
-        let if_statement = IfStatement::new(
-            condition,
-            body,
-            (for_token.position.clone(), right_brace.position),
-        );
+        let if_statement = IfStatement::new(condition,then_branch,else_branch,(if_token.position.clone(),end_position));
         Ok(Box::new(if_statement))
     }
 
@@ -353,6 +352,17 @@ impl<'a> Parser {
         let semi = self.advance();
         let statement = ExpressionStatement::new(exp, semi.unwrap()?);
         Ok(Box::new(statement))
+    }
+
+    pub fn block(&mut self)->Result<Box<dyn StateMent>,AllError>{
+        let left_brace = self.advance().unwrap()?;
+        let mut body = vec![];
+        while !self.next_n_match(vec![TokenRow::RightBrace])? {
+            body.push(self.statement()?);
+        }
+        let right_brace = self.advance().unwrap()?;
+        let block = Block::new(body,(left_brace.position.clone(),right_brace.position.clone()));
+        Ok(Box::new(block))
     }
 
     pub fn programing(&mut self) -> Result<Vec<Box<dyn StateMent>>, AllError> {
