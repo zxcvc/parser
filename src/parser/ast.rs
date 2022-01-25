@@ -276,6 +276,7 @@ pub mod Expression {
 }
 
 pub mod StateMent {
+    use crate::error::SyntaxError;
     use crate::scanner::TokenRow;
     use std::fmt::Debug;
 
@@ -284,6 +285,7 @@ pub mod StateMent {
     use super::{Position, Token};
     pub trait StateMent: Debug {
         fn get_position(&self) -> (Position, Position);
+        fn need_semi(&self) -> bool;
     }
     #[derive(Debug)]
     pub struct ExpressionStatement {
@@ -333,13 +335,9 @@ pub mod StateMent {
     }
 
     impl ExpressionStatement {
-        pub fn new(exp: Box<dyn Exp>, semicolon_token: Token) -> Self {
-            let start = exp.get_position().0;
-            Self {
-                exp,
-                start,
-                end: semicolon_token.position,
-            }
+        pub fn new(exp: Box<dyn Exp>) -> Self {
+            let (start, end) = exp.get_position();
+            Self { exp, start, end }
         }
     }
 
@@ -425,30 +423,54 @@ pub mod StateMent {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
         }
+
+        fn need_semi(&self) -> bool {
+            true
+        }
     }
     impl StateMent for DeclareStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            true
         }
     }
     impl StateMent for AssignStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
         }
+
+        fn need_semi(&self) -> bool {
+            true
+        }
     }
     impl StateMent for IfStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            false
         }
     }
     impl StateMent for WhileStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
         }
+
+        fn need_semi(&self) -> bool {
+            false
+        }
     }
     impl StateMent for Block {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            false
         }
     }
 

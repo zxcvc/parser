@@ -248,26 +248,46 @@ impl<'a> Parser {
     }
 
     pub fn statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
-        match self.peek_n(0) {
+        while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
+            self.advance();
+        }
+        let res = match self.peek_n(0) {
             None => todo!(),
             Some(res) => match res.clone()? {
                 Token {
                     token: t,
                     position: p,
                 } => match t {
-                    TokenRow::Let => self.declare_statement(),
+                    TokenRow::Let => {
+                        let res = self.declare_statement()?;
+                        self.expect(res.get_position().1, TokenRow::Semicolon)?;
+                        self.advance();
+                        Ok(res)
+                    }
                     TokenRow::Identifier(ident) if self.next_n_is(1, vec![TokenRow::Eq]) => {
-                        self.assign_statement()
+                        let res = self.assign_statement()?;
+                        self.expect(res.get_position().1, TokenRow::Semicolon)?;
+                        self.advance();
+                        Ok(res)
                     }
                     TokenRow::If => self.if_statement(),
                     TokenRow::For => self.for_statement(),
                     TokenRow::While => self.while_statement(),
                     TokenRow::Return => self.return_statement(),
                     TokenRow::LeftBrace => self.block(),
-                    _ => self.expression_statement(),
+                    _ => {
+                        let res = self.expression_statement()?;
+                        self.expect(res.get_position().1, TokenRow::Semicolon)?;
+                        self.advance();
+                        Ok(res)
+                    },
                 },
             },
+        };
+        while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
+            self.advance();
         }
+        res
     }
 
     pub fn right_value(&mut self) -> Result<RightValueExpression, AllError> {
@@ -302,12 +322,10 @@ impl<'a> Parser {
         self.advance();
         let right_value = self.right_value()?;
         let value_end = right_value.0.get_position().1;
-        self.expect(value_end, TokenRow::Semicolon)?;
-        let seim_token = self.advance().unwrap()?;
         Ok(AssignStatement::new(
             variable_token.token,
             right_value,
-            (variable_token.position, seim_token.position),
+            (variable_token.position, value_end.clone()),
         ))
     }
 
@@ -363,9 +381,7 @@ impl<'a> Parser {
 
     pub fn expression_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
         let exp = self.expresson()?;
-        self.expect(exp.get_position().1, TokenRow::Semicolon)?;
-        let semi = self.advance();
-        let statement = ExpressionStatement::new(exp, semi.unwrap()?);
+        let statement = ExpressionStatement::new(exp);
         Ok(Box::new(statement))
     }
 
@@ -386,13 +402,8 @@ impl<'a> Parser {
     pub fn programing(&mut self) -> Result<Vec<Box<dyn StateMent>>, AllError> {
         let mut programing = vec![];
         while !self.is_end() {
-            while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
-                self.advance();
-            }
-            programing.push(self.statement()?);
-            while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
-                self.advance();
-            }
+            let statement = self.statement()?;
+            programing.push(statement);
         }
         Ok(programing)
     }
