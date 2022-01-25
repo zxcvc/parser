@@ -328,6 +328,15 @@ pub mod StateMent {
     }
 
     #[derive(Debug)]
+    pub struct ForStatement {
+        pub init_statement: Option<Box<dyn StateMent>>,
+        pub condition: Option<Box<dyn Exp>>,
+        pub next_statement: Option<Box<dyn StateMent>>,
+        pub body: Box<dyn StateMent>,
+        pub start: Position,
+        pub end: Position,
+    }
+    #[derive(Debug)]
     pub struct Block {
         pub body: Vec<Box<dyn StateMent>>,
         pub start: Position,
@@ -409,6 +418,25 @@ pub mod StateMent {
         }
     }
 
+    impl ForStatement {
+        pub fn new(
+            init_statement: Option<Box<dyn StateMent>>,
+            condition: Option<Box<dyn Exp>>,
+            next_statement: Option<Box<dyn StateMent>>,
+            body: Box<dyn StateMent>,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                init_statement,
+                condition,
+                next_statement,
+                body,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
     impl Block {
         pub fn new(statements: Vec<Box<dyn StateMent>>, position: (Position, Position)) -> Self {
             Self {
@@ -456,6 +484,15 @@ pub mod StateMent {
         }
     }
     impl StateMent for WhileStatement {
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            false
+        }
+    }
+    impl StateMent for ForStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
         }
