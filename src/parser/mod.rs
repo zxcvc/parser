@@ -417,12 +417,15 @@ impl<'a> Parser {
             while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
                 self.advance();
             }
-            let statement = self.statement()?;
-            if statement.need_semi() {
-                self.expect(statement.get_position().1, TokenRow::Semicolon)?;
-                self.advance();
+            if !self.next_n_match(vec![TokenRow::RightBrace])?{
+                let statement = self.statement()?;
+                if statement.need_semi() {
+                    self.expect(statement.get_position().1, TokenRow::Semicolon)?;
+                    self.advance();
+                }
+                body.push(statement);
             }
-            body.push(statement);
+            
             while !self.is_end() && self.next_n_is(0, vec![TokenRow::Semicolon]) {
                 self.advance();
             }
