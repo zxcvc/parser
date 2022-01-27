@@ -1,4 +1,6 @@
 pub mod ast;
+use crate::parser::ast::StateMent::ReturnStatement;
+
 use self::ast::{error::ParseError, Expression::PrimaryRow};
 use super::error::{NoContentError, SyntaxError as AllError};
 use super::scanner::{error::ScanError, Position, Scanner, Token, TokenRow};
@@ -401,7 +403,18 @@ impl<'a> Parser {
     }
 
     pub fn return_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
-        todo!()
+        let return_token = self.advance().unwrap()?;
+        let mut exp:Option<Box<dyn Exp>> = None;
+        let start = return_token.position.clone();
+        let mut end = Position::new(start.row,start.col+6);
+        if !self.next_n_is(0, vec![TokenRow::Semicolon]){
+            let _exp = self.expresson()?;
+            end = _exp.get_position().1;
+            exp = Some(_exp);
+
+        }
+        let return_statement = ReturnStatement::new(exp,(start,end));
+        Ok(Box::new(return_statement))
     }
 
     pub fn expression_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {

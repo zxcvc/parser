@@ -336,6 +336,14 @@ pub mod StateMent {
         pub start: Position,
         pub end: Position,
     }
+
+    #[derive(Debug)]
+    pub struct ReturnStatement{
+        pub exp:Option<Box<dyn Exp>>,
+        pub start:Position,
+        pub end:Position,
+    }
+
     #[derive(Debug)]
     pub struct Block {
         pub body: Vec<Box<dyn StateMent>>,
@@ -437,6 +445,16 @@ pub mod StateMent {
         }
     }
 
+    impl ReturnStatement{
+        pub fn new(exp:Option<Box<dyn Exp>>,position:(Position,Position))->Self{
+            Self{
+                exp,
+                start:position.0,
+                end:position.1,
+            }
+        }
+    }
+
     impl Block {
         pub fn new(statements: Vec<Box<dyn StateMent>>, position: (Position, Position)) -> Self {
             Self {
@@ -499,6 +517,15 @@ pub mod StateMent {
 
         fn need_semi(&self) -> bool {
             false
+        }
+    }
+    impl StateMent for ReturnStatement {
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            true
         }
     }
     impl StateMent for Block {
