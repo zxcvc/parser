@@ -276,13 +276,13 @@ pub mod Expression {
 }
 
 pub mod StateMent {
-    use crate::error::SyntaxError;
+
     use crate::scanner::TokenRow;
     use std::fmt::Debug;
 
-    use super::right_value::{RightValue, RightValueExpression};
+    use super::right_value::RightValueExpression;
     use super::Expression::Exp;
-    use super::{Position, Token};
+    use super::Position;
     pub trait StateMent: Debug {
         fn get_position(&self) -> (Position, Position);
         fn need_semi(&self) -> bool;
@@ -338,10 +338,10 @@ pub mod StateMent {
     }
 
     #[derive(Debug)]
-    pub struct ReturnStatement{
-        pub exp:Option<Box<dyn Exp>>,
-        pub start:Position,
-        pub end:Position,
+    pub struct ReturnStatement {
+        pub exp: Option<Box<dyn Exp>>,
+        pub start: Position,
+        pub end: Position,
     }
 
     #[derive(Debug)]
@@ -445,12 +445,12 @@ pub mod StateMent {
         }
     }
 
-    impl ReturnStatement{
-        pub fn new(exp:Option<Box<dyn Exp>>,position:(Position,Position))->Self{
-            Self{
+    impl ReturnStatement {
+        pub fn new(exp: Option<Box<dyn Exp>>, position: (Position, Position)) -> Self {
+            Self {
                 exp,
-                start:position.0,
-                end:position.1,
+                start: position.0,
+                end: position.1,
             }
         }
     }
