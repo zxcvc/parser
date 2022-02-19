@@ -1,8 +1,8 @@
 use self::error::ScanError;
 
 use super::utils::{is_alpha, is_alphadigital, is_digital, is_space};
-use lazy_static::lazy_static;
-use std::{collections::HashMap, error::Error, iter::Peekable, str::Chars};
+use lazy_static::{lazy_static, __Deref};
+use std::{collections::HashMap, error::Error, iter::Peekable, str::Chars,ops::Deref};
 
 pub mod error {
     use super::Position;
@@ -67,6 +67,58 @@ pub enum TokenRow {
     Null,
     This,
 }
+
+impl TokenRow{
+    pub fn to_string(&self)->String{
+        match self{
+            TokenRow::Dot => ".",
+            TokenRow::Comma => ",",
+            TokenRow::Semicolon => ";",
+            TokenRow::Plus => "+",
+            TokenRow::Minus => "-",
+            TokenRow::Start => "*",
+            TokenRow::Div => "/",
+            TokenRow::Eq => "=",
+            TokenRow::DoubleEq => "==",
+            TokenRow::Exclamation => "!",
+            TokenRow::NotEq => "!=",
+            TokenRow::Greater => ">",
+            TokenRow::Less => "<",
+            TokenRow::GreaterEq => ">=",
+            TokenRow::LessEq => "<=",
+            TokenRow::LeftParent => "(",
+            TokenRow::RightParent => ")",
+            TokenRow::LeftBrace => "{",
+            TokenRow::RightBrace => "}",
+            TokenRow::Digital(_) => todo!(),
+            TokenRow::String(_) => todo!(),
+            TokenRow::Space(_) => todo!(),
+            TokenRow::Identifier(s) => &*s,
+            TokenRow::Let => todo!(),
+            TokenRow::Function => "function",
+            TokenRow::Return => todo!(),
+            TokenRow::If => todo!(),
+            TokenRow::Else => todo!(),
+            TokenRow::For => todo!(),
+            TokenRow::While => todo!(),
+            TokenRow::Continue => todo!(),
+            TokenRow::Break => todo!(),
+            TokenRow::True => todo!(),
+            TokenRow::False => todo!(),
+            TokenRow::Null => todo!(),
+            TokenRow::This => todo!(),
+        }.to_string()
+    }
+}
+
+impl Deref for Token{
+    type Target = TokenRow;
+
+    fn deref(&self) -> &Self::Target {
+        &self.token
+    }
+}
+
 
 lazy_static! {
     static ref IDENTIFER_MAP: HashMap<&'static str, TokenRow> = {

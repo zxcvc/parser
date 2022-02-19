@@ -78,44 +78,7 @@ impl<'a> Parser {
             ..position
         };
         let next = self.peek_n(0)?;
-        let s = match expected {
-            TokenRow::Dot => ".",
-            TokenRow::Comma => "//",
-            TokenRow::Semicolon => ";",
-            TokenRow::Plus => "+",
-            TokenRow::Minus => "-",
-            TokenRow::Start => "*",
-            TokenRow::Div => "/",
-            TokenRow::Eq => "=",
-            TokenRow::DoubleEq => "==",
-            TokenRow::Exclamation => "!",
-            TokenRow::NotEq => "!=",
-            TokenRow::Greater => ">",
-            TokenRow::Less => "<",
-            TokenRow::GreaterEq => ">=",
-            TokenRow::LessEq => "<=",
-            TokenRow::LeftParent => "(",
-            TokenRow::RightParent => ")",
-            TokenRow::LeftBrace => "{",
-            TokenRow::RightBrace => "}",
-            TokenRow::Digital(_) => todo!(),
-            TokenRow::String(_) => todo!(),
-            TokenRow::Space(_) => todo!(),
-            TokenRow::Identifier(_) => todo!(),
-            TokenRow::Let => todo!(),
-            TokenRow::Function => "function",
-            TokenRow::Return => todo!(),
-            TokenRow::If => todo!(),
-            TokenRow::Else => todo!(),
-            TokenRow::For => todo!(),
-            TokenRow::While => todo!(),
-            TokenRow::Continue => todo!(),
-            TokenRow::Break => todo!(),
-            TokenRow::True => todo!(),
-            TokenRow::False => todo!(),
-            TokenRow::Null => todo!(),
-            TokenRow::This => todo!(),
-        };
+        let s = expected.to_string();
         match next {
             Some(Token {
                 token: _expected,
@@ -452,14 +415,21 @@ impl<'a> Parser {
         let mut args = vec![];
         while !self.next_n_match(vec![TokenRow::RightParent])? {
             let arg = self.advance()?.unwrap();
+            if !matches!(arg.token,TokenRow::Identifier(_)){
+                return Err(ParseError::from(arg.position).into())
+            }
             args.push(arg);
             match self.peek_n(0)? {
-                Some(ret) => {
-                    todo!("重构scanner的错误处理");
+                Some(&Token { token:TokenRow::Comma, ..}) => {
+                    let comma = self.advance()?.unwrap();
+                    if !matches!(self.peek_n(0)?.unwrap(),&Token { token:TokenRow::Identifier(_), .. }){
+                        return Err(ParseError::from(comma.position).into());
+                    }
                 }
-                None => {}
+                _ => {}
             }
         }
+        self.advance()?;
         Ok(args)
     }
 
@@ -473,12 +443,8 @@ impl<'a> Parser {
             }) => {
                 self.expect(position, TokenRow::LeftParent)?;
                 dbg!(self.advance()?);
-                let mut args = vec![];
-                while !self.next_n_match(vec![TokenRow::RightParent])? {
-                    self.advance()?;
-                    todo!();
-                }
-                self.advance()?;
+                let args = self.get_args()?.into_iter().map(|v|v.to_string()).collect();
+                dbg!(&args);
                 let _body = self.block()?;
                 let body = std::mem::take(unsafe { &mut *(Box::into_raw(_body) as *mut Block) });
                 let end = body.get_position().1;
