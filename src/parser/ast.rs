@@ -350,6 +350,24 @@ pub mod StateMent {
         pub start: Position,
         pub end: Position,
     }
+    impl Default for Block {
+        fn default() -> Self {
+            Self {
+                body: Default::default(),
+                start: Default::default(),
+                end: Default::default(),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct FunctionDeclareStatement {
+        pub name: String,
+        pub args: Vec<String>,
+        pub body: Block,
+        pub start: Position,
+        pub end: Position,
+    }
 
     impl ExpressionStatement {
         pub fn new(exp: Box<dyn Exp>) -> Self {
@@ -465,6 +483,23 @@ pub mod StateMent {
         }
     }
 
+    impl FunctionDeclareStatement {
+        pub fn new(
+            name: String,
+            args: Vec<String>,
+            body: Block,
+            position: (Position, Position),
+        ) -> Self {
+            Self {
+                name,
+                args,
+                body,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
     impl StateMent for ExpressionStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
@@ -529,6 +564,15 @@ pub mod StateMent {
         }
     }
     impl StateMent for Block {
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
+
+        fn need_semi(&self) -> bool {
+            false
+        }
+    }
+    impl StateMent for FunctionDeclareStatement {
         fn get_position(&self) -> (Position, Position) {
             (self.start.clone(), self.end.clone())
         }
