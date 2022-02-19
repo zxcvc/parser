@@ -14,7 +14,7 @@ use ast::StateMent::{
 
 #[derive(Debug)]
 pub struct Parser {
-    pub token_list: Result<Vec<Token>,ScanError>,
+    pub token_list: Result<Vec<Token>, ScanError>,
     index: usize,
 }
 
@@ -41,35 +41,33 @@ impl<'a> Parser {
             return Ok(None);
         }
         let token_list = self.token_list.as_ref();
-        let list = match token_list{
+        let list = match token_list {
             Ok(list) => list,
-            Err(e) => return Err(e.clone())
+            Err(e) => return Err(e.clone()),
         };
         let token = list[self.index].clone();
         self.index += 1;
         Ok(Some(token.clone()))
     }
 
-    pub fn is_end(&self) -> Result<bool,ScanError> {
-        match self.token_list.as_ref(){
+    pub fn is_end(&self) -> Result<bool, ScanError> {
+        match self.token_list.as_ref() {
             Err(e) => Err(e.clone()),
-            Ok(list) => Ok(self.index >= list.len())
+            Ok(list) => Ok(self.index >= list.len()),
         }
     }
 
     pub fn peek_n(&self, n: usize) -> Result<Option<&Token>, ScanError> {
-        match self.token_list.as_ref(){
+        match self.token_list.as_ref() {
             Err(e) => Err(e.clone()),
-            Ok(list) => Ok(list.get(self.index+n)),
+            Ok(list) => Ok(list.get(self.index + n)),
         }
     }
 
     pub fn next_n_match(&self, match_list: Vec<TokenRow>) -> Result<bool, AllError> {
         let token = self.peek_n(0)?;
         match token {
-            Some(v) => {
-                Ok(match_list.iter().any(|x| v.token == *x))
-            },
+            Some(v) => Ok(match_list.iter().any(|x| v.token == *x)),
             None => Ok(false),
         }
     }
@@ -132,7 +130,7 @@ impl<'a> Parser {
         }
     }
 
-    pub fn next_n_is(&self, n: usize, match_list: Vec<TokenRow>) -> Result<bool,AllError> {
+    pub fn next_n_is(&self, n: usize, match_list: Vec<TokenRow>) -> Result<bool, AllError> {
         let n = self.peek_n(n)?;
         match n {
             Some(Token {
@@ -249,9 +247,7 @@ impl<'a> Parser {
             let next_token = self.peek_n(0)?;
             match next_token {
                 None => Err(NoContentError::new().into()),
-                Some(res) => {
-                    Err(ParseError::from(res.position.clone()).into())
-                }
+                Some(res) => Err(ParseError::from(res.position.clone()).into()),
             }
         }
     }
@@ -307,7 +303,7 @@ impl<'a> Parser {
 
     fn assign_statement_row(&mut self) -> Result<AssignStatement, AllError> {
         let variable_token = self.advance()?.unwrap();
-        self.advance();
+        self.advance()?;
         let right_value = self.right_value()?;
         let value_end = right_value.0.get_position().1;
         Ok(AssignStatement::new(
@@ -320,10 +316,10 @@ impl<'a> Parser {
     pub fn if_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
         let if_token = self.advance()?.unwrap();
         self.expect(if_token.position.clone(), TokenRow::LeftParent)?;
-        self.advance();
+        self.advance()?;
         let condition = self.expresson()?;
         self.expect(if_token.position.clone(), TokenRow::RightParent)?;
-        self.advance();
+        self.advance()?;
         let then_branch = self.statement()?;
         let mut end_position = then_branch.get_position().1;
         let mut else_branch = None;
@@ -347,36 +343,36 @@ impl<'a> Parser {
         let start = for_token.position.clone();
 
         self.expect(for_token.position, TokenRow::LeftParent)?;
-        self.advance();
+        self.advance()?;
 
         let mut init_statement: Option<Box<dyn StateMent>> = None;
         if !self.next_n_is(0, vec![TokenRow::Semicolon])? {
             let _init_statement = self.statement()?;
             self.expect(_init_statement.get_position().1, TokenRow::Semicolon)?;
-            self.advance();
+            self.advance()?;
             init_statement = Some(_init_statement);
         } else {
-            self.advance();
+            self.advance()?;
         }
 
         let mut condition: Option<Box<dyn Exp>> = None;
         if !self.next_n_is(0, vec![TokenRow::Semicolon])? {
             let _condition = self.expresson()?;
             self.expect(_condition.get_position().1, TokenRow::Semicolon)?;
-            self.advance();
+            self.advance()?;
             condition = Some(_condition);
         } else {
-            self.advance();
+            self.advance()?;
         }
 
         let mut next_statement: Option<Box<dyn StateMent>> = None;
         if !self.next_n_is(0, vec![TokenRow::RightParent])? {
             let _next_statement = self.statement()?;
             self.expect(_next_statement.get_position().1, TokenRow::RightParent)?;
-            self.advance();
+            self.advance()?;
             next_statement = Some(_next_statement);
         } else {
-            self.advance();
+            self.advance()?;
         }
 
         let body = self.statement()?;
@@ -396,10 +392,10 @@ impl<'a> Parser {
     pub fn while_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
         let while_token = self.advance()?.unwrap();
         self.expect(while_token.position.clone(), TokenRow::LeftParent)?;
-        self.advance();
+        self.advance()?;
         let condition = self.expresson()?;
         self.expect(condition.get_position().1, TokenRow::RightParent)?;
-        self.advance();
+        self.advance()?;
         let body = self.statement()?;
         let end_position = body.get_position().1;
         let while_statement =
@@ -432,19 +428,19 @@ impl<'a> Parser {
         let mut body = vec![];
         while !self.next_n_match(vec![TokenRow::RightBrace])? {
             while !self.is_end()? && self.next_n_is(0, vec![TokenRow::Semicolon])? {
-                self.advance();
+                self.advance()?;
             }
             if !self.next_n_match(vec![TokenRow::RightBrace])? {
                 let statement = self.statement()?;
                 if statement.need_semi() {
                     self.expect(statement.get_position().1, TokenRow::Semicolon)?;
-                    self.advance();
+                    self.advance()?;
                 }
                 body.push(statement);
             }
 
             while !self.is_end()? && self.next_n_is(0, vec![TokenRow::Semicolon])? {
-                self.advance();
+                self.advance()?;
             }
         }
         let right_brace = self.advance()?.unwrap();
@@ -452,16 +448,16 @@ impl<'a> Parser {
         Ok(Box::new(block))
     }
 
-    pub fn get_args(&mut self)->Result<Vec<Token>,AllError>{
+    pub fn get_args(&mut self) -> Result<Vec<Token>, AllError> {
         let mut args = vec![];
-        while !self.next_n_match(vec![TokenRow::RightParent])?{
+        while !self.next_n_match(vec![TokenRow::RightParent])? {
             let arg = self.advance()?.unwrap();
             args.push(arg);
-            match self.peek_n(0)?{
-                Some(ret) =>{
+            match self.peek_n(0)? {
+                Some(ret) => {
                     todo!("重构scanner的错误处理");
                 }
-                None =>{}
+                None => {}
             }
         }
         Ok(args)
@@ -476,13 +472,13 @@ impl<'a> Parser {
                 position,
             }) => {
                 self.expect(position, TokenRow::LeftParent)?;
-                dbg!(self.advance());
+                dbg!(self.advance()?);
                 let mut args = vec![];
                 while !self.next_n_match(vec![TokenRow::RightParent])? {
-                    self.advance();
+                    self.advance()?;
                     todo!();
                 }
-                self.advance();
+                self.advance()?;
                 let _body = self.block()?;
                 let body = std::mem::take(unsafe { &mut *(Box::into_raw(_body) as *mut Block) });
                 let end = body.get_position().1;
@@ -505,16 +501,16 @@ impl<'a> Parser {
         let mut programing = vec![];
         while !self.is_end()? {
             while !self.is_end()? && self.next_n_is(0, vec![TokenRow::Semicolon])? {
-                self.advance();
+                self.advance()?;
             }
             let statement = self.statement()?;
             if statement.need_semi() {
                 self.expect(statement.get_position().1, TokenRow::Semicolon)?;
-                self.advance();
+                self.advance()?;
             }
             programing.push(statement);
             while !self.is_end()? && self.next_n_is(0, vec![TokenRow::Semicolon])? {
-                self.advance();
+                self.advance()?;
             }
         }
         Ok(programing)

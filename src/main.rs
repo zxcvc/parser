@@ -3,7 +3,7 @@ mod parser;
 mod scanner;
 mod utils;
 
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
 use parser::Parser;
 fn main() {
