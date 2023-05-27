@@ -32,7 +32,7 @@ pub mod error {
 
 pub mod Expression {
 
-    use super::{Position, Token, TokenRow};
+    use super::{Position, StateMent, Token, TokenRow};
     use std::fmt::Debug;
 
     pub trait Exp: Debug {
@@ -277,16 +277,17 @@ pub mod Expression {
 
 pub mod StateMent {
 
-    use crate::scanner::TokenRow;
+    use crate::scanner::{Token, TokenRow};
     use std::fmt::Debug;
 
-    use super::right_value::RightValueExpression;
+    use super::right_value::{RightValue, RightValueExpression};
     use super::Expression::Exp;
     use super::Position;
     pub trait StateMent: Debug {
         fn get_position(&self) -> (Position, Position);
         fn need_semi(&self) -> bool;
     }
+
     #[derive(Debug)]
     pub struct ExpressionStatement {
         pub exp: Box<dyn Exp>,
@@ -363,8 +364,20 @@ pub mod StateMent {
     #[derive(Debug)]
     pub struct FunctionDeclareStatement {
         pub name: String,
-        pub args: Vec<String>,
+        pub args: Arguments,
         pub body: Block,
+        pub start: Position,
+        pub end: Position,
+    }
+    #[derive(Debug)]
+    pub struct Arguments {
+        pub args: Vec<String>,
+        pub position: Option<(Position, Position)>,
+    }
+    #[derive(Debug)]
+    pub struct FunctionCall {
+        pub function_name: String,
+        pub arguments: Arguments,
         pub start: Position,
         pub end: Position,
     }
@@ -486,7 +499,7 @@ pub mod StateMent {
     impl FunctionDeclareStatement {
         pub fn new(
             name: String,
-            args: Vec<String>,
+            args: Arguments,
             body: Block,
             position: (Position, Position),
         ) -> Self {
@@ -494,6 +507,23 @@ pub mod StateMent {
                 name,
                 args,
                 body,
+                start: position.0,
+                end: position.1,
+            }
+        }
+    }
+
+    impl Arguments {
+        pub fn new(args: Vec<String>, position: Option<(Position, Position)>) -> Self {
+            Self { args, position }
+        }
+    }
+
+    impl FunctionCall {
+        pub fn new(name: String, args: Arguments, position: (Position, Position)) -> Self {
+            Self {
+                function_name: name,
+                arguments: args,
                 start: position.0,
                 end: position.1,
             }
@@ -581,7 +611,15 @@ pub mod StateMent {
             false
         }
     }
+    impl StateMent for FunctionCall {
+        fn get_position(&self) -> (Position, Position) {
+            (self.start.clone(), self.end.clone())
+        }
 
+        fn need_semi(&self) -> bool {
+            true
+        }
+    }
     impl From<AssignStatement> for DeclareStatement {
         fn from(assing_statement: AssignStatement) -> Self {
             Self {
@@ -611,4 +649,15 @@ pub mod right_value {
     }
 
     impl<T: Exp> RightValue for T {}
+}
+
+pub mod Value {
+    pub trait Value: Sized {}
+
+    use super::right_value::RightValue;
+    use super::Expression::Exp;
+
+    impl<T: Exp + Sized> Value for T {}
+
+    // impl<T: RightValue + Sized> Value for T {}
 }

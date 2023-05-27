@@ -1,5 +1,7 @@
 pub mod ast;
-use self::ast::{error::ParseError, Expression::PrimaryRow};
+use self::ast::{
+    error::ParseError, right_value::RightValue, Expression::PrimaryRow, StateMent::FunctionCall,
+};
 use super::error::{NoContentError, SyntaxError as AllError};
 use super::scanner::{error::ScanError, Position, Scanner, Token, TokenRow};
 use ast::right_value::RightValueExpression;
@@ -8,9 +10,10 @@ use ast::Expression::{
     UnaryOperator,
 };
 use ast::StateMent::{
-    AssignStatement, Block, DeclareStatement, ExpressionStatement, ForStatement,
+    Arguments, AssignStatement, Block, DeclareStatement, ExpressionStatement, ForStatement,
     FunctionDeclareStatement, IfStatement, ReturnStatement, StateMent, WhileStatement,
 };
+use ast::Value::Value;
 
 #[derive(Debug)]
 pub struct Parser {
@@ -224,9 +227,14 @@ impl<'a> Parser {
                     position: _p,
                 } => match t {
                     TokenRow::Let => self.declare_statement(),
-                    TokenRow::Identifier(_ident) if self.next_n_is(1, vec![TokenRow::Eq])? => {
-                        self.assign_statement()
-                    }
+                    TokenRow::Identifier(_ident) => match self.peek_n(1)? {
+                        Some(Token { token: t, position }) => match t {
+                            TokenRow::Eq => self.assign_statement(),
+                            TokenRow::LeftParent => self.function_call_statement(),
+                            _ => self.expression_statement(),
+                        },
+                        _ => self.expression_statement(),
+                    },
                     TokenRow::If => self.if_statement(),
                     TokenRow::For => self.for_statement(),
                     TokenRow::While => self.while_statement(),
@@ -411,25 +419,42 @@ impl<'a> Parser {
         Ok(Box::new(block))
     }
 
-    pub fn get_args(&mut self) -> Result<Vec<Token>, AllError> {
+    pub fn get_args(&mut self) -> Result<Arguments, AllError> {
         let mut args = vec![];
+        let mut position = None;
         while !self.next_n_match(vec![TokenRow::RightParent])? {
             let arg = self.advance()?.unwrap();
-            if !matches!(arg.token,TokenRow::Identifier(_)){
-                return Err(ParseError::from(arg.position).into())
+            if !matches!(arg.token, TokenRow::Identifier(_) | TokenRow::Digital(_)) {
+                return Err(ParseError::from(arg.position).into());
             }
             args.push(arg);
             match self.peek_n(0)? {
-                Some(&Token { token:TokenRow::Comma, ..}) => {
+                Some(&Token {
+                    token: TokenRow::Comma,
+                    ..
+                }) => {
                     let comma = self.advance()?.unwrap();
-                    if !matches!(self.peek_n(0)?.unwrap(),&Token { token:TokenRow::Identifier(_), .. }){
+                    if !matches!(
+                        self.peek_n(0)?.unwrap(),
+                        &Token {
+                            token: TokenRow::Identifier(_),
+                            ..
+                        } | &Token {
+                            token: TokenRow::Digital(_),
+                            ..
+                        }
+                    ) {
                         return Err(ParseError::from(comma.position).into());
                     }
                 }
                 _ => {}
             }
         }
-        self.advance()?;
+        if let (Some(start), Some(end)) = (args.first(), args.last()) {
+            position = Some((start.position.clone(), end.position.clone()))
+        }
+        let args = args.into_iter().map(|item| item.to_string()).collect();
+        let args = Arguments::new(args, position);
         Ok(args)
     }
 
@@ -443,8 +468,8 @@ impl<'a> Parser {
             }) => {
                 self.expect(position, TokenRow::LeftParent)?;
                 dbg!(self.advance()?);
-                let args = self.get_args()?.into_iter().map(|v|v.to_string()).collect();
-                dbg!(&args);
+                let args = self.get_args()?;
+                self.advance()?;
                 let _body = self.block()?;
                 let body = std::mem::take(unsafe { &mut *(Box::into_raw(_body) as *mut Block) });
                 let end = body.get_position().1;
@@ -458,6 +483,64 @@ impl<'a> Parser {
                 position: Position {
                     row: function_token.position.row,
                     col: function_token.position.col + 1,
+                },
+            })),
+        }
+    }
+
+    pub fn get_arguments(&mut self) -> Result<Arguments, AllError> {
+        let mut args = vec![];
+        while !self.next_n_match(vec![TokenRow::RightParent])? {
+            let arg = self.advance()?.unwrap();
+            if !matches!(arg.token, TokenRow::Identifier(_) | TokenRow::Digital(_)) {
+                return Err(ParseError::from(arg.position).into());
+            }
+            args.push(arg);
+            match self.peek_n(0)? {
+                Some(&Token {
+                    token: TokenRow::Comma,
+                    ..
+                }) => {
+                    let comma = self.advance()?.unwrap();
+                    if !matches!(
+                        self.peek_n(0)?.unwrap(),
+                        &Token {
+                            token: TokenRow::Identifier(_),
+                            ..
+                        }
+                    ) {
+                        return Err(ParseError::from(comma.position).into());
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.advance()?;
+        // Ok(args);
+        todo!()
+    }
+
+    pub fn function_call_statement(&mut self) -> Result<Box<dyn StateMent>, AllError> {
+        let function_name = self.advance()?;
+        let temp = function_name.clone().unwrap();
+        match function_name {
+            Some(Token {
+                token: TokenRow::Identifier(name),
+                position,
+            }) => {
+                self.advance()?;
+                let args = self.get_args()?;
+                let rights = self.advance()?.unwrap();
+                let function_call_statement =
+                    FunctionCall::new(name, args, (position, rights.position));
+                Ok(Box::new(function_call_statement))
+            }
+            _ => Err(AllError::ParseError(ParseError {
+                code: 400,
+                describe: "function name is expected".to_string(),
+                position: Position {
+                    row: temp.position.row,
+                    col: temp.position.col + 1,
                 },
             })),
         }
